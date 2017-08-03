@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Runtime.InteropServices;
 using Windows.Foundation;
 using Windows.Media;
@@ -9,6 +11,16 @@ namespace HueSpotify
 {
     public static class HelperMethods
     {
+        public static int GetMired(int temp)
+        {
+            return 1000000 / temp;
+        }
+
+        public static StringContent ToStringContent(this JToken t)
+        {
+            return new StringContent(t.ToString());
+        }
+
         public static double NextDouble(this Random random, double minimum, double maximum)
         {
             return random.NextDouble() * (maximum - minimum) + minimum;
