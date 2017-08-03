@@ -13,6 +13,7 @@ namespace HueSpotify
         private TimeSpan resetTime;
         private float resetValue;
         private Action<float> resetFunc;
+        private Action func;
 
         public Timer(TimeSpan resetTime, Action<float> resetFunc, float resetValue)
         {
@@ -21,13 +22,26 @@ namespace HueSpotify
             this.resetFunc = resetFunc;
         }
 
+        public Timer(TimeSpan resetTime, Action func)
+        {
+            this.resetTime = resetTime;
+            this.func = func;
+        }
+
         public void Update()
         {
             if (time + resetTime < DateTime.Now)
             {
                 Debug.WriteLine($"Timer of {resetTime.TotalSeconds} invoked");
                 time = DateTime.Now;
-                resetFunc.Invoke(resetValue);
+                if (resetFunc != null)
+                {
+                    resetFunc.Invoke(resetValue);
+                }
+                else if (func != null)
+                {
+                    func.Invoke();
+                }
             }
         }
 

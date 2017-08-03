@@ -67,6 +67,7 @@ namespace HueSpotify
 
         Timer silenceTimer;
         Timer balanceTimer;
+        Timer lightSwitchTimer;
 
         public MainPage()
         {
@@ -119,6 +120,7 @@ namespace HueSpotify
             }
             silenceTimer = new Timer(TimeSpan.FromSeconds(5), Reset, 0);
             balanceTimer = new Timer(TimeSpan.FromMinutes(2), Reset, 0.1f);
+            lightSwitchTimer = new Timer(TimeSpan.FromSeconds(30), AssignNewColors);
         }
 
         Rectangle GetBasicRectangle()
@@ -161,11 +163,17 @@ namespace HueSpotify
             var audioOutputDevices = await DeviceInformation.FindAllAsync(DeviceClass.AudioRender);
             foreach (var device in audioOutputDevices)
             {
+                Debug.WriteLine(device.Name);
                 if (device.Name.Contains("Speakers (ASUS Xonar DGX Audio Device)"))
                 {
                     audioOutput = device;
                     break;
                 }
+                //if (device.Name.Contains("Speakers (Logitech G930 Gaming Headset)"))
+                //{
+                //    audioOutput = device;
+                //    break;
+                //}
                 else if (device.Name.Contains("Input"))
                 {
                     audioOutput = device;
@@ -203,7 +211,12 @@ namespace HueSpotify
             inputNode.AddOutgoingConnection(frameOutputNode);
             //inputNode.AddOutgoingConnection(outputNode);
 
-            audioGraph.QuantumStarted += AudioGraph_QuantumStarted;
+            // sync
+            //audioGraph.QuantumStarted += AudioGraph_QuantumStarted;
+
+            // async
+            // we want to use the async version because we only update lights when we detect a beat
+            // if we were using sync it would take longer to find beats
             audioGraph.QuantumProcessed += AudioGraph_QuantumProcessed;
             audioGraph.UnrecoverableErrorOccurred += AudioGraph_UnrecoverableErrorOccurred;
             audioGraph.Start();
@@ -241,24 +254,25 @@ namespace HueSpotify
             //}
         }
 
-        private void AudioGraph_QuantumStarted(AudioGraph sender, object args)
-        {
-            ProcessFrame();
-        }
+        //private void AudioGraph_QuantumStarted(AudioGraph sender, object args)
+        //{
+        //}
 
         private void AudioGraph_QuantumProcessed(AudioGraph sender, object args)
         {
-            //Debug.WriteLine($"started processing: {Environment.CurrentManagedThreadId}");
-            //await Task.Delay(TimeSpan.FromSeconds(1));
-            //Debug.WriteLine($"ended processing:  {Environment.CurrentManagedThreadId}");
+            ProcessBeats();
         }
 
-        void ProcessFrame()
+        void ProcessBeats()
         {
             AudioFrame audioFrame = frameOutputNode.GetFrame();
             List<float[]> amplitudeData = HelperMethods.ProcessFrameOutput(audioFrame);
             List<float[]> channelData = HelperMethods.GetFftData(HelperMethods.ConvertTo512(amplitudeData, audioGraph), audioGraph);
-            for (int i = 0; i < channelData.Count / 2; i++)
+            if (channelData.Count <= 0)
+            {
+                return;
+            }
+            for (int i = 0; i < 1; i++)
             {
                 float[] leftChannel = channelData[i];
                 float[] rightChannel = channelData[i + 1];
@@ -273,72 +287,77 @@ namespace HueSpotify
                 mid.Set(leftChannel, rightChannel, lowSection, midSection);
                 high.Set(leftChannel, rightChannel, midSection);
                 int number = random.Next();
+                byte brightnessFade = 10;
                 if (low.Check(0.5f))
                 {
-                    SetColor(0, 255, 3, 0);
-                    byte currentBright = (byte)(low.GetAverage() * 255f);
+                    livingRoom.SetColor(livingRoom.GetAssignedColor(), 255);
+                    desk.SetColor(desk.GetAssignedColor(), 255);
+                    byte currentBright = (byte)(low.GetAverage() * 127f);
                     if (currentBright >= livingRoom.LastBrightness)
                     {
                         livingRoom.SetBrightness(currentBright);
                         desk.SetBrightness(currentBright);
-                        livingRoom.SetBrightness(0, 10);
-                        desk.SetBrightness(0, 10);
+                        livingRoom.SetBrightness(0, brightnessFade);
+                        desk.SetBrightness(0, brightnessFade);
                     }
                     //SetColor(0, 0, 3, 10);
                 }
                 //SetBrightness((byte)(low.GetAverage() * 255f), 3);
                 if (mid.Check(0.5f))
                 {
-                    SetColor(25500, 255, 1, 0);
-                    byte currentBright = (byte)(mid.GetAverage() * 255f);
+                    // green: 25500
+                    bedroom.SetColor(bedroom.GetAssignedColor(), 255);
+                    byte currentBright = (byte)(mid.GetAverage() * 127f);
                     if (currentBright >= bedroom.LastBrightness)
                     {
                         bedroom.SetBrightness(currentBright);
-                        bedroom.SetBrightness(0, 10);
+                        bedroom.SetBrightness(0, brightnessFade);
                     }
                     //SetColor(25500, 0, 1, 10);
                 }
                 //SetBrightness((byte)(mid.GetAverage() * 255f), 0);
                 if (high.Check(0.5f))
                 {
-                    SetColor(46920, 255, 2, 0);
-                    byte currentBright = (byte)(high.GetAverage() * 255f);
+                    // blue: 46920
+                    bed.SetColor(bed.GetAssignedColor(), 255);
+                    byte currentBright = (byte)(high.GetAverage() * 127f);
                     if (currentBright >= bed.LastBrightness)
                     {
                         bed.SetBrightness(currentBright);
-                        bed.SetBrightness(0, 10);
+                        bed.SetBrightness(0, brightnessFade);
                     }
                     //SetColor(46920, 0, 2, 10);
                 }
                 //SetBrightness((byte)(high.GetAverage() * 255f), 3);
 
-                Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
-                    () =>
-                    {
-                        for (int j = 0; j < rectangles.Count; j++)
-                        {
-                            rectangles[j].Height = maxListLeft[j].Value * 500;
-                        }
-                        lowBar.Height = low.GetAverage() * 500;
-                        midBar.Height = mid.GetAverage() * 500;
-                        highBar.Height = high.GetAverage() * 500;
-                        //if (low.LastCheck)
-                        //{
-                        //    FadeOut("beat", Colors.Red, HorizontalAlignment.Left);
-                        //}
-                        //if (mid.LastCheck)
-                        //{
-                        //    FadeOut("beat", Colors.Green, HorizontalAlignment.Center);
-                        //}
-                        //if (high.LastCheck)
-                        //{
-                        //    FadeOut("beat", Colors.CornflowerBlue, HorizontalAlignment.Right);
-                        //}
-                    }).AsTask().Wait();
+                //Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
+                //    () =>
+                //    {
+                //        for (int j = 0; j < rectangles.Count; j++)
+                //        {
+                //            rectangles[j].Height = maxListLeft[j].Value * 500;
+                //        }
+                //        lowBar.Height = low.GetAverage() * 500;
+                //        midBar.Height = mid.GetAverage() * 500;
+                //        highBar.Height = high.GetAverage() * 500;
+                //        //if (low.LastCheck)
+                //        //{
+                //        //    FadeOut("beat", Colors.Red, HorizontalAlignment.Left);
+                //        //}
+                //        //if (mid.LastCheck)
+                //        //{
+                //        //    FadeOut("beat", Colors.Green, HorizontalAlignment.Center);
+                //        //}
+                //        //if (high.LastCheck)
+                //        //{
+                //        //    FadeOut("beat", Colors.CornflowerBlue, HorizontalAlignment.Right);
+                //        //}
+                //    }).AsTask().Wait();
             }
 
             silenceTimer.Update();
             balanceTimer.Update();
+            lightSwitchTimer.Update();
             if (low.CheckValue(0.01f))
             {
                 silenceTimer.Reset();
@@ -348,6 +367,14 @@ namespace HueSpotify
             //bed.Update();
             //livingRoom.Update();
             //desk.Update();
+        }
+
+        void AssignNewColors()
+        {
+            livingRoom.color = random.Next(0, 7);
+            desk.color = random.Next(0, 7);
+            bedroom.color = random.Next(0, 7);
+            bed.color = random.Next(0, 7);
         }
 
         void Reset()
@@ -400,44 +427,6 @@ namespace HueSpotify
         private float GetAverageValue(float leftValue, float rightValue)
         {
             return (leftValue + rightValue) / 2f;
-        }
-
-        async Task DimLight()
-        {
-            var o = GetDefaultObject();
-            o["bri"] = 0;
-            await httpClient.PutAsync($"{baseUrl}/lights/3/state", o.ToStringContent());
-        }
-
-        void SetBrightness(byte brightness, int light)
-        {
-            JObject o = GetDefaultObject();
-            o["bri"] = brightness;
-            httpClient.PutAsync($"{baseUrl}/lights/{light}/state", o.ToStringContent());
-        }
-
-        void SetBrightness(byte brightness, int light, byte transitionTime)
-        {
-            JObject o = new JObject();
-            o["transitiontime"] = transitionTime;
-            o["bri"] = brightness;
-            httpClient.PutAsync($"{baseUrl}/lights/{light}/state", o.ToStringContent());
-        }
-
-        void SetRandomColor(int light)
-        {
-            JObject o = GetDefaultObject();
-            o["hue"] = random.Next(65535);
-            httpClient.PutAsync($"{baseUrl}/lights/{light}/state", o.ToStringContent());
-        }
-
-        void SetColor(ushort color, byte saturation, int light, byte transitionTime)
-        {
-            JObject o = new JObject();
-            o["transitiontime"] = transitionTime;
-            o["hue"] = color;
-            o["sat"] = saturation;
-            httpClient.PutAsync($"{baseUrl}/lights/{light}/state", o.ToStringContent());
         }
 
         async Task TurnOnLights()
@@ -505,6 +494,14 @@ namespace HueSpotify
         private void resetButton_Click(object sender, RoutedEventArgs e)
         {
             Reset();
+        }
+
+        private void lowSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
+        {
+            //livingRoom.SetBrightness(255);
+            //desk.SetBrightness(255);
+            //livingRoom.SetColor((ushort)e.NewValue, 255);
+            //desk.SetColor((ushort)e.NewValue, 255);
         }
     }
 }

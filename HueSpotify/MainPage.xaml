@@ -9,6 +9,10 @@
 
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" KeyDown="Grid_KeyDown">
         <Button x:Name="resetButton" Content="Reset" VerticalAlignment="Top" Click="resetButton_Click"/>
-        <Grid x:Name="rectangleGrid" KeyDown="rectangleGrid_KeyDown" Tapped="rectangleGrid_Tapped"/>
+        <Grid x:Name="rectangleGrid" KeyDown="rectangleGrid_KeyDown" Tapped="rectangleGrid_Tapped">
+            <Slider x:Name="lowSlider" Margin="0,491,0,0" VerticalAlignment="Top" ValueChanged="lowSlider_ValueChanged" Maximum="65535"/>
+            <Slider x:Name="midSlider" Margin="0,763,0,0" VerticalAlignment="Top"/>
+            <Slider x:Name="highSlider" Margin="0,945,0,0" VerticalAlignment="Top"/>
+        </Grid>
     </Grid>
 </Page>

@@ -11,6 +11,57 @@ namespace HueSpotify
 {
     public static class HelperMethods
     {
+        public static (int, int) RedRange { get { return (64001, 67185); } }
+        public static (int, int) OrangeRange { get { return (1651, 5550); } }
+        public static (int, int) YellowRange { get { return (5551, 11000); } }
+        public static (int, int) GreenRange { get { return (11001, 29000); } }
+        public static (int, int) BlueRange { get { return (29001, 47500); } }
+        public static (int, int) IndigoRange { get { return (47501, 50500); } }
+        public static (int, int) VioletRange { get { return (50501, 64000); } }
+
+        public static ushort GetRandomInRed()
+        {
+            Random random = new Random();
+            int value = random.Next(RedRange.Item1, RedRange.Item2);
+            return (ushort)(value % 65535);
+        }
+
+        public static ushort GetRandomInOrange()
+        {
+            Random random = new Random();
+            return (ushort)random.Next(OrangeRange.Item1, OrangeRange.Item2);
+        }
+
+        public static ushort GetRandomInYellow()
+        {
+            Random random = new Random();
+            return (ushort)random.Next(YellowRange.Item1, YellowRange.Item2);
+        }
+
+        public static ushort GetRandomInGreen()
+        {
+            Random random = new Random();
+            return (ushort)random.Next(GreenRange.Item1, GreenRange.Item2);
+        }
+
+        public static ushort GetRandomInBlue()
+        {
+            Random random = new Random();
+            return (ushort)random.Next(BlueRange.Item1, BlueRange.Item2);
+        }
+
+        public static ushort GetRandomInIndigo()
+        {
+            Random random = new Random();
+            return (ushort)random.Next(IndigoRange.Item1, IndigoRange.Item2);
+        }
+
+        public static ushort GetRandomInViolet()
+        {
+            Random random = new Random();
+            return (ushort)random.Next(VioletRange.Item1, VioletRange.Item2);
+        }
+
         public static int GetMired(int temp)
         {
             return 1000000 / temp;
