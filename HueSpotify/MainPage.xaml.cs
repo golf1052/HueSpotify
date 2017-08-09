@@ -118,7 +118,7 @@ namespace HueSpotify
                 rectangleGrid.Children.Add(rect);
                 rectangles.Add(rect);
             }
-            silenceTimer = new Timer(TimeSpan.FromSeconds(5), Reset, 0);
+            silenceTimer = new Timer(TimeSpan.FromSeconds(5), Reset, 0, false);
             balanceTimer = new Timer(TimeSpan.FromMinutes(2), Reset, 0.1f);
             lightSwitchTimer = new Timer(TimeSpan.FromSeconds(30), AssignNewColors);
         }
@@ -356,8 +356,8 @@ namespace HueSpotify
             }
 
             silenceTimer.Update();
-            balanceTimer.Update();
-            lightSwitchTimer.Update();
+            //balanceTimer.Update();
+            //lightSwitchTimer.Update();
             if (low.CheckValue(0.01f))
             {
                 silenceTimer.Reset();
